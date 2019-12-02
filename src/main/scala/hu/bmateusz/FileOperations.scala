@@ -8,4 +8,6 @@ object FileOperations {
 
   def lineToInts(str: String): Seq[Int] = str.split("\\s").map(_.toInt)
 
+  def readResourceIntLine(resource: String): Seq[Int] = scala.io.Source.fromResource(resource).mkString.split(',').map(_.toInt)
+
 }
