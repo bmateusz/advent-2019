@@ -24,7 +24,7 @@ object Day05 {
 
   @tailrec
   def parseIntcode(program: Seq[Int], input: Seq[Int] = Seq.empty, output: Seq[Int] = Seq.empty, pointer: Int = 0): Result = {
-    val longOp = program(pointer).toString.map(_.toString.toInt).reverse.padTo(5, 0).reverse
+    val longOp = program(pointer).toString.map(_.asDigit).reverse.padTo(5, 0).reverse
     val p1 = parameterMode(longOp(2), program) _
     val p2 = parameterMode(longOp(1), program) _
     // val p3 = parameterMode(longOp(0), program) _

@@ -7,24 +7,18 @@ object Day01 {
     val input = FileOperations
       .readResourceLines("day01.txt")
       .map(_.toInt)
-    println(taskOne(input))
-    println(taskTwo(input))
+    println(fuelRequirements(input, identity))
+    println(fuelRequirements(input, ofFuel))
   }
 
-  def taskOne(input: Seq[Int]): Int = {
+  def fuelRequirements(input: Seq[Int], f: Int => Int): Int = {
     input
       .map(_ / 3 - 2)
+      .map(f)
       .sum
   }
 
-  def taskTwo(input: Seq[Int]): Int = {
-    input
-      .map(_ / 3 - 2)
-      .map(moreFuel)
-      .sum
-  }
-
-  def moreFuel(fuelMass: Int): Int = {
+  def ofFuel(fuelMass: Int): Int = {
     fuelMass + List.unfold(fuelMass) { mass =>
       val newMass = mass / 3 - 2
       if (newMass > 0) {

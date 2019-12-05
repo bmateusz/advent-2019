@@ -10,7 +10,7 @@ object Day04 {
   }
 
   def meetsCriteria(int: Int, digitPairsFunction: Int => Boolean): Boolean = {
-    val digits = int.toString.map(_.toInt)
+    val digits = int.toString.map(_.asDigit)
     if (digits.size == 6) {
       val digitsIncreasing = digits.zip(digits.tail).forall { case (l, r) => l <= r }
       val digitsPairs = digits.groupMapReduce(identity)(_ => 1)(_ + _)
