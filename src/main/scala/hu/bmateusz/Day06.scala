@@ -2,7 +2,7 @@ package hu.bmateusz
 
 object Day06 {
 
-  /** https://adventofcode.com/2019/day/7 */
+  /** https://adventofcode.com/2019/day/6 */
   def main(args: Array[String]): Unit = {
     val input: Seq[Edge] = FileOperations
       .readResourceLines("day06.txt")

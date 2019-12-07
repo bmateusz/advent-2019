@@ -4,7 +4,11 @@ import scala.annotation.tailrec
 
 object Intcode {
 
-  case class Result(program: Seq[Int], input: Seq[Int], output: Seq[Int])
+  case class Result(program: Seq[Int], input: Seq[Int], output: Seq[Int], pointer: Int) {
+    def isStopped: Boolean = program(pointer) == 99
+
+    def run: Result = runIntcode(program, input, output, pointer)
+  }
 
   @tailrec
   def runIntcode(program: Seq[Int], input: Seq[Int] = Seq.empty, output: Seq[Int] = Seq.empty, pointer: Int = 0): Result = {
@@ -23,12 +27,16 @@ object Intcode {
           pointer + 4,
         )
       case 3 =>
-        runIntcode(
-          program.updated(program(pointer + 1), input.head),
-          input.tail,
-          output,
-          pointer + 2
-        )
+        if (input.isEmpty) {
+          Result(program, input, output, pointer)
+        } else {
+          runIntcode(
+            program.updated(program(pointer + 1), input.head),
+            input.tail,
+            output,
+            pointer + 2
+          )
+        }
       case 4 =>
         runIntcode(
           program,
@@ -61,11 +69,11 @@ object Intcode {
           pointer + 4,
         )
       case 99 =>
-        Result(program, input, output)
+        Result(program, input, output, pointer)
       case op: Int =>
         println(program)
         println(s"ERROR $op at $pointer")
-        Result(Seq.empty, input, output)
+        Result(Seq.empty, input, output, pointer)
     }
   }
 
