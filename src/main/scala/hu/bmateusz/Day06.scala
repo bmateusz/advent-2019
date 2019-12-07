@@ -5,7 +5,7 @@ object Day06 {
   /** https://adventofcode.com/2019/day/7 */
   def main(args: Array[String]): Unit = {
     val input: Seq[Edge] = FileOperations
-      .readResourceLines("day07.txt")
+      .readResourceLines("day06.txt")
       .map(Edge.fromString)
     println(countOrbits(input))
     println(fromYouToSanta(input))
