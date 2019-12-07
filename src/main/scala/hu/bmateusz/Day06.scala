@@ -1,6 +1,6 @@
 package hu.bmateusz
 
-object Day07 {
+object Day06 {
 
   /** https://adventofcode.com/2019/day/7 */
   def main(args: Array[String]): Unit = {
