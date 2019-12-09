@@ -4,86 +4,156 @@ import scala.annotation.tailrec
 
 object Intcode {
 
-  case class Result(program: Seq[Int], input: Seq[Int], output: Seq[Int], pointer: Int) {
-    def isStopped: Boolean = program(pointer) == 99
+  case class Result(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt) {
+    def isStopped: Boolean = program.get(pointer) == 99
 
     def run: Result = runIntcode(program, input, output, pointer)
   }
 
+  class ProgramMemory(val map: Map[BigInt, BigInt]) {
+    def get(idx: BigInt): BigInt = {
+      if (idx < 0) {
+        throw new IndexOutOfBoundsException(s"Negative index $idx")
+      } else {
+        map.getOrElse(idx, 0)
+      }
+    }
+    def updated(idx: BigInt, value: BigInt): ProgramMemory = new ProgramMemory(map.updated(idx, value))
+    def head: BigInt = get(0)
+    override def toString: String = map.toList.sortBy(_._1).toString()
+  }
+
+  object ProgramMemory {
+    def apply(seq: Seq[Int]) = new ProgramMemory(seq.zipWithIndex.map(p => BigInt(p._2) -> BigInt(p._1)).toMap)
+    def fromBigInts(seq: Seq[BigInt]) = new ProgramMemory(seq.zipWithIndex.map(p => BigInt(p._2) -> p._1).toMap)
+    def fromString(seq: String): ProgramMemory = fromBigInts(seq.split(',').map(BigInt(_)))
+  }
+
   @tailrec
-  def runIntcode(program: Seq[Int], input: Seq[Int] = Seq.empty, output: Seq[Int] = Seq.empty, pointer: Int = 0): Result = {
-    val longOp = program(pointer).toString.map(_.asDigit).reverse.padTo(5, 0).reverse
-    val p1 = parameterMode(longOp(2), program) _
-    val p2 = parameterMode(longOp(1), program) _
-    // val p3 = parameterMode(longOp(0), program) _
+  def runIntcode(program: ProgramMemory,
+                 input: Seq[BigInt] = Seq.empty,
+                 output: Seq[BigInt] = Seq.empty,
+                 pointer: BigInt = 0,
+                 relativeBase: BigInt = 0): Result = {
+    val longOp = program.get(pointer).toString.map(_.asDigit).reverse.padTo(5, 0).reverse
+    val p1 = parameterMode(longOp(2), program, relativeBase) _
+    val p2 = parameterMode(longOp(1), program, relativeBase) _
+    val p3 = parameterMode(longOp(0), program, relativeBase) _
     val op = longOp(3) * 10 + longOp(4)
+    // println(s"$pointer @ $longOp $op | $relativeBase")
     op match {
       case 1 | 2 =>
-        val res = if (op == 1) p1(pointer + 1) + p2(pointer + 2) else p1(pointer + 1) * p2(pointer + 2)
+        val res = if (op == 1) p1(pointer + 1, false) + p2(pointer + 2, false) else p1(pointer + 1, false) * p2(pointer + 2, false)
         runIntcode(
-          program.updated(program(pointer + 3), res),
+          program.updated(p3(pointer + 3, true), res),
           input,
           output,
           pointer + 4,
+          relativeBase,
         )
       case 3 =>
         if (input.isEmpty) {
           Result(program, input, output, pointer)
         } else {
           runIntcode(
-            program.updated(program(pointer + 1), input.head),
+            program.updated(p1(pointer + 1, true), input.head),
             input.tail,
             output,
-            pointer + 2
+            pointer + 2,
+            relativeBase,
           )
         }
       case 4 =>
         runIntcode(
           program,
           input,
-          output :+ program(program(pointer + 1)),
-          pointer + 2
+          output :+ p1(pointer + 1, false),
+          pointer + 2,
+          relativeBase,
         )
       case 5 | 6 =>
-        if ((op == 5 && p1(pointer + 1) != 0) || (op == 6 && p1(pointer + 1) == 0)) {
+        if ((op == 5 && p1(pointer + 1, false) != 0) || (op == 6 && p1(pointer + 1, false) == 0)) {
           runIntcode(
             program,
             input,
             output,
-            p2(pointer + 2)
+            p2(pointer + 2, false),
+            relativeBase,
           )
         } else {
           runIntcode(
             program,
             input,
             output,
-            pointer + 3
+            pointer + 3,
+            relativeBase,
           )
         }
       case 7 | 8 =>
-        val res = (op == 7 && p1(pointer + 1) < p2(pointer + 2)) || (op == 8 && p1(pointer + 1) == p2(pointer + 2))
+        val res = (op == 7 && p1(pointer + 1, false) < p2(pointer + 2, false)) || (op == 8 && p1(pointer + 1, false) == p2(pointer + 2, false))
         runIntcode(
-          program.updated(program(pointer + 3), boolToInt(res)),
+          program.updated(p3(pointer + 3, true), boolToInt(res)),
           input,
           output,
           pointer + 4,
+          relativeBase,
+        )
+      case 9 =>
+        runIntcode(
+          program,
+          input,
+          output,
+          pointer + 2,
+          relativeBase + p1(pointer + 1, false),
         )
       case 99 =>
         Result(program, input, output, pointer)
       case op: Int =>
         println(program)
         println(s"ERROR $op at $pointer")
-        Result(Seq.empty, input, output, pointer)
+        Result(program, input, output, pointer)
     }
   }
 
-  private def parameterMode(mode: Int, program: Seq[Int])(p: Int): Int = {
-    mode match {
-      case 0 => program(program(p))
-      case 1 => program(p)
+  private def parameterMode(mode: Int, program: ProgramMemory, relativeBase: BigInt)(p: BigInt, writing: Boolean): BigInt = {
+    if (writing) {
+      mode match {
+        case 0 => program.get(p) // position mode
+        case 1 => p // immediate mode
+        case 2 => relativeBase + program.get(p) // relative
+      }
+    } else {
+      mode match {
+        case 0 => program.get(program.get(p)) // position mode
+        case 1 => program.get(p) // immediate mode
+        case 2 => program.get(relativeBase + program.get(p)) // relative
+      }
     }
   }
 
   private def boolToInt(bool: Boolean): Int = if (bool) 1 else 0
+
+  def main(args: Array[String]): Unit = {
+    def assert(actual: BigInt, expected: BigInt): Unit = {
+      if (actual == expected) println("ok") else throw new Exception(s"$actual != $expected")
+    }
+
+    println(s"Run integration tests")
+    val input02 = ProgramMemory(FileOperations.readResourceIntLine("day02.txt"))
+    assert(runIntcode(input02.updated(1, 12).updated(2, 2)).program.head, 7210630)
+    assert(Day02.findFor(input02, 19690720).map(r => r._1 * 100 + r._2).get, 3892)
+
+    val input05 = ProgramMemory(FileOperations.readResourceIntLine("day05.txt"))
+    assert(runIntcode(input05, Seq(1)).output.last, 11933517)
+    assert(runIntcode(input05, Seq(5)).output.last, 10428568)
+
+    val input07 = ProgramMemory(FileOperations.readResourceIntLine("day07.txt"))
+    assert(Day07.largestOutputSignal(input07), 199988)
+    assert(Day07.largestOutputSignalFeedbackLoop(input07), 17519904)
+
+    val input09 = ProgramMemory.fromString(FileOperations.readResourceLines("day09.txt").head)
+    assert(runIntcode(input09, Seq(1)).output.last, 3780860499L)
+    assert(runIntcode(input09, Seq(2)).output.last, 33343)
+  }
 
 }
