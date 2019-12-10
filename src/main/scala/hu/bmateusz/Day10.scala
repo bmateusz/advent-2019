@@ -38,10 +38,9 @@ object Day10 {
   }
 
   def rotation(laser: Position, asteroid: Position): Double = {
-    val dx = laser.x - asteroid.x
-    val dy = laser.y - asteroid.y
-    val rad = - Math.atan2(dx, dy)
-    if (rad < 0) rad + 2 * Math.PI else rad
+    val dx = asteroid.x - laser.x
+    val dy = asteroid.y - laser.y
+    - Math.atan2(dx, dy)
   }
 
   trait Entity
