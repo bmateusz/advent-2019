@@ -4,10 +4,10 @@ import scala.annotation.tailrec
 
 object Intcode {
 
-  case class Result(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt) {
+  case class Result(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt, relativeBase: BigInt) {
     def isStopped: Boolean = program.get(pointer) == 99
 
-    def run: Result = runIntcode(program, input, output, pointer)
+    def run: Result = runIntcode(program, input, output, pointer, relativeBase)
   }
 
   class ProgramMemory(val map: Map[BigInt, BigInt]) {
@@ -18,14 +18,19 @@ object Intcode {
         map.getOrElse(idx, 0)
       }
     }
+
     def updated(idx: BigInt, value: BigInt): ProgramMemory = new ProgramMemory(map.updated(idx, value))
+
     def head: BigInt = get(0)
+
     override def toString: String = map.toList.sortBy(_._1).toString()
   }
 
   object ProgramMemory {
     def apply(seq: Seq[Int]) = new ProgramMemory(seq.zipWithIndex.map(p => BigInt(p._2) -> BigInt(p._1)).toMap)
+
     def fromBigInts(seq: Seq[BigInt]) = new ProgramMemory(seq.zipWithIndex.map(p => BigInt(p._2) -> p._1).toMap)
+
     def fromString(seq: String): ProgramMemory = fromBigInts(seq.split(',').map(BigInt(_)))
   }
 
@@ -36,16 +41,16 @@ object Intcode {
                  pointer: BigInt = 0,
                  relativeBase: BigInt = 0): Result = {
     val longOp = program.get(pointer).toString.map(_.asDigit).reverse.padTo(5, 0).reverse
-    val p1 = parameterMode(longOp(2), program, relativeBase) _
-    val p2 = parameterMode(longOp(1), program, relativeBase) _
-    val p3 = parameterMode(longOp(0), program, relativeBase) _
+    lazy val p1 = parameterMode(longOp(2), program, relativeBase, pointer + 1)
+    lazy val p2 = parameterMode(longOp(1), program, relativeBase, pointer + 2)
+    lazy val p3 = parameterMode(longOp(0), program, relativeBase, pointer + 3)
     val op = longOp(3) * 10 + longOp(4)
     // println(s"$pointer @ $longOp $op | $relativeBase")
     op match {
       case 1 | 2 =>
-        val res = if (op == 1) p1(pointer + 1, false) + p2(pointer + 2, false) else p1(pointer + 1, false) * p2(pointer + 2, false)
+        val res = if (op == 1) program.get(p1) + program.get(p2) else program.get(p1) * program.get(p2)
         runIntcode(
-          program.updated(p3(pointer + 3, true), res),
+          program.updated(p3, res),
           input,
           output,
           pointer + 4,
@@ -53,10 +58,10 @@ object Intcode {
         )
       case 3 =>
         if (input.isEmpty) {
-          Result(program, input, output, pointer)
+          Result(program, input, output, pointer, relativeBase)
         } else {
           runIntcode(
-            program.updated(p1(pointer + 1, true), input.head),
+            program.updated(p1, input.head),
             input.tail,
             output,
             pointer + 2,
@@ -67,32 +72,27 @@ object Intcode {
         runIntcode(
           program,
           input,
-          output :+ p1(pointer + 1, false),
+          output :+ program.get(p1),
           pointer + 2,
           relativeBase,
         )
       case 5 | 6 =>
-        if ((op == 5 && p1(pointer + 1, false) != 0) || (op == 6 && p1(pointer + 1, false) == 0)) {
-          runIntcode(
-            program,
-            input,
-            output,
-            p2(pointer + 2, false),
-            relativeBase,
-          )
+        val jumpTo = if ((op == 5 && program.get(p1) != 0) || (op == 6 && program.get(p1) == 0)) {
+          program.get(p2)
         } else {
-          runIntcode(
-            program,
-            input,
-            output,
-            pointer + 3,
-            relativeBase,
-          )
+          pointer + 3
         }
-      case 7 | 8 =>
-        val res = (op == 7 && p1(pointer + 1, false) < p2(pointer + 2, false)) || (op == 8 && p1(pointer + 1, false) == p2(pointer + 2, false))
         runIntcode(
-          program.updated(p3(pointer + 3, true), boolToInt(res)),
+          program,
+          input,
+          output,
+          jumpTo,
+          relativeBase,
+        )
+      case 7 | 8 =>
+        val res = (op == 7 && program.get(p1) < program.get(p2)) || (op == 8 && program.get(p1) == program.get(p2))
+        runIntcode(
+          program.updated(p3, boolToInt(res)),
           input,
           output,
           pointer + 4,
@@ -104,30 +104,22 @@ object Intcode {
           input,
           output,
           pointer + 2,
-          relativeBase + p1(pointer + 1, false),
+          relativeBase + program.get(p1),
         )
       case 99 =>
-        Result(program, input, output, pointer)
+        Result(program, input, output, pointer, relativeBase)
       case op: Int =>
         println(program)
         println(s"ERROR $op at $pointer")
-        Result(program, input, output, pointer)
+        Result(program, input, output, pointer, relativeBase)
     }
   }
 
-  private def parameterMode(mode: Int, program: ProgramMemory, relativeBase: BigInt)(p: BigInt, writing: Boolean): BigInt = {
-    if (writing) {
-      mode match {
-        case 0 => program.get(p) // position mode
-        case 1 => p // immediate mode
-        case 2 => relativeBase + program.get(p) // relative
-      }
-    } else {
-      mode match {
-        case 0 => program.get(program.get(p)) // position mode
-        case 1 => program.get(p) // immediate mode
-        case 2 => program.get(relativeBase + program.get(p)) // relative
-      }
+  private def parameterMode(mode: Int, program: ProgramMemory, relativeBase: BigInt, p: BigInt): BigInt = {
+    mode match {
+      case 0 => program.get(p) // position mode
+      case 1 => p // immediate mode
+      case 2 => relativeBase + program.get(p) // relative
     }
   }
 

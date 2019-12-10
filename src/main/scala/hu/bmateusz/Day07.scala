@@ -24,8 +24,9 @@ object Day07 {
 
   def largestOutputSignalFeedbackLoop(program: ProgramMemory): BigInt = {
     (5 until 10).permutations.map { perm =>
-      val init = Result(program, Seq(perm.head, 0), Seq.empty, 0) +:
-        perm.tail.map { p => Result(program, Seq(p), Seq.empty, 0) }.toList
+      val init = (Seq[BigInt](perm.head, 0) +: perm.tail.map(Seq[BigInt](_)).toList).map {
+        input => Result(program, input, Seq.empty, 0, 0)
+      }
       runWithFeedbackLoop(init, 0)
     }.max
   }
