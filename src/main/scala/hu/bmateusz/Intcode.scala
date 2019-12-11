@@ -4,10 +4,10 @@ import scala.annotation.tailrec
 
 object Intcode {
 
-  case class Result(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt, relativeBase: BigInt) {
+  case class IntcodeState(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt, relativeBase: BigInt) {
     def isStopped: Boolean = program.get(pointer) == 99
 
-    def run: Result = runIntcode(program, input, output, pointer, relativeBase)
+    def run: IntcodeState = runIntcode(program, input, output, pointer, relativeBase)
   }
 
   class ProgramMemory(val map: Map[BigInt, BigInt]) {
@@ -24,6 +24,8 @@ object Intcode {
     def head: BigInt = get(0)
 
     override def toString: String = map.toList.sortBy(_._1).toString()
+
+    def toIntcodeState: IntcodeState = IntcodeState(this, Seq.empty, Seq.empty, 0, 0)
   }
 
   object ProgramMemory {
@@ -39,7 +41,7 @@ object Intcode {
                  input: Seq[BigInt] = Seq.empty,
                  output: Seq[BigInt] = Seq.empty,
                  pointer: BigInt = 0,
-                 relativeBase: BigInt = 0): Result = {
+                 relativeBase: BigInt = 0): IntcodeState = {
     val longOp = program.get(pointer).toString.map(_.asDigit).reverse.padTo(5, 0).reverse
     lazy val p1 = parameterMode(longOp(2), program, relativeBase, pointer + 1)
     lazy val p2 = parameterMode(longOp(1), program, relativeBase, pointer + 2)
@@ -58,7 +60,7 @@ object Intcode {
         )
       case 3 =>
         if (input.isEmpty) {
-          Result(program, input, output, pointer, relativeBase)
+          IntcodeState(program, input, output, pointer, relativeBase)
         } else {
           runIntcode(
             program.updated(p1, input.head),
@@ -107,11 +109,11 @@ object Intcode {
           relativeBase + program.get(p1),
         )
       case 99 =>
-        Result(program, input, output, pointer, relativeBase)
+        IntcodeState(program, input, output, pointer, relativeBase)
       case op: Int =>
         println(program)
         println(s"ERROR $op at $pointer")
-        Result(program, input, output, pointer, relativeBase)
+        IntcodeState(program, input, output, pointer, relativeBase)
     }
   }
 

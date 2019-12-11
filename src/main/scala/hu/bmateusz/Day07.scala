@@ -25,14 +25,14 @@ object Day07 {
   def largestOutputSignalFeedbackLoop(program: ProgramMemory): BigInt = {
     (5 until 10).permutations.map { perm =>
       val init = (Seq[BigInt](perm.head, 0) +: perm.tail.map(Seq[BigInt](_)).toList).map {
-        input => Result(program, input, Seq.empty, 0, 0)
+        input => IntcodeState(program, input, Seq.empty, 0, 0)
       }
       runWithFeedbackLoop(init, 0)
     }.max
   }
 
   @tailrec
-  def runWithFeedbackLoop(programs: List[Result], index: Int): BigInt = {
+  def runWithFeedbackLoop(programs: List[IntcodeState], index: Int): BigInt = {
     val runProgram = programs(index).run
     val nextIndex = (index + 1) % programs.size
     if (nextIndex == 0 && runProgram.isStopped) {
