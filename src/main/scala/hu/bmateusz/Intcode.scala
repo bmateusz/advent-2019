@@ -5,9 +5,17 @@ import scala.annotation.tailrec
 object Intcode {
 
   case class IntcodeState(program: ProgramMemory, input: Seq[BigInt], output: Seq[BigInt], pointer: BigInt, relativeBase: BigInt) {
+    def in(in: BigInt): IntcodeState = copy(input = Seq(in))
+
+    def in(in: Seq[BigInt]): IntcodeState = copy(input = in)
+
+    def flush: IntcodeState = copy(output = Seq.empty)
+
     def isStopped: Boolean = program.get(pointer) == 99
 
     def run: IntcodeState = runIntcode(program, input, output, pointer, relativeBase)
+
+    def updatedProgram(idx: Int, value: BigInt): IntcodeState = copy(program = program.updated(idx, value))
   }
 
   class ProgramMemory(val map: Map[BigInt, BigInt]) {

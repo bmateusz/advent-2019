@@ -13,39 +13,6 @@ object Day11 {
     println(runRobot(input, InitialWhite))
   }
 
-  class Matrix[T](val mat: Vector[Vector[T]]) {
-    def get(p: Position): T = mat(p.y)(p.x)
-    def set(p: Position, elem: T): Matrix[T] = new Matrix(mat.updated(p.y, mat(p.y).updated(p.x, elem)))
-
-    override def toString: String = {
-      mat.map(_.mkString).mkString("\n")
-    }
-
-    def flatten: Vector[T] = mat.flatten
-
-    def trim(elem: T): Matrix[T] = {
-      val topAndBottom = mat
-        .dropWhile(_.exists(_ != elem) == false).reverse
-        .dropWhile(_.exists(_ != elem) == false).reverse
-      val left = topAndBottom.map(_.indexWhere(_ != elem)).min
-      val right = topAndBottom.map(_.reverse.indexWhere(_ != elem)).min
-      new Matrix[T](topAndBottom.map(_.drop(left).dropRight(right)))
-    }
-  }
-
-  object Matrix {
-    def empty[T](size: Int, elem: T): Matrix[T] = {
-      val row = Vector.fill(size)(elem)
-      new Matrix(Vector.fill(size)(row))
-    }
-  }
-
-  class Position(val x: Int, val y: Int) {
-    def increase(dx: Int, dy: Int): Position = new Position(x + dx, y + dy)
-
-    override def toString: String = s"($x, $y)"
-  }
-
   sealed trait Direction {
     val dx: Int
     val dy: Int
