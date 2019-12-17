@@ -27,7 +27,7 @@ object Day13 {
       case (GameState(matrix, score), curr) if curr(0) == -1 =>
         GameState(matrix, curr(2))
       case (GameState(matrix, score), curr) =>
-        GameState(matrix.set(new Position(curr(0), curr(1)), curr(2)), score)
+        GameState(matrix.set(Position(curr(0), curr(1)), curr(2)), score)
     }
   }
 

@@ -1,6 +1,5 @@
 package hu.bmateusz
 
-
 class Matrix[T](val mat: Vector[Vector[T]]) {
   def get(p: Position): T = mat(p.y)(p.x)
 
@@ -15,7 +14,7 @@ class Matrix[T](val mat: Vector[Vector[T]]) {
       row.zipWithIndex.find { case (e, x) =>
         e == elem
       }.map { case (e, x) =>
-        new Position(x, y)
+        Position(x, y)
       }
     }.headOption
   }

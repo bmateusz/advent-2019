@@ -120,7 +120,7 @@ object Day11 {
 
   def runRobot(input: IntcodeState, startingColor: Color): RobotState = {
     val size = 140
-    val initialPosition = new Position(size / 2, size / 2)
+    val initialPosition = Position(size / 2, size / 2)
     val initialMatrix = Matrix.empty[Color](size, InitialBlack).set(initialPosition, startingColor)
     val initialState = new RobotState(initialMatrix, input, new Turtle(Up, initialPosition))
     runRobotState(initialState)
